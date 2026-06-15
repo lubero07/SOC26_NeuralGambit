@@ -37,7 +37,7 @@ public:
         }
 
         // We use a universal auto collection loop here to bypass MvList vs MoveList version issues entirely
-        auto moves = MoveList();
+        auto moves = MvList();
         movegen::legalmoves(moves, board);
 
         if (board.sideToMove() == Color::WHITE) {
