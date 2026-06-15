@@ -25,7 +25,6 @@ private:
     }
 
 public:
-    // Pure structural Minimax with Alpha-Beta that takes the working board reference directly
     int minimax_alpha_beta(Board& board, int depth, int alpha, int beta, vector<Move>& best_moves_vec) {
         auto game_over_info = board.isGameOver();
         
@@ -36,9 +35,9 @@ public:
             return 0;
         }
 
-        // We use a universal auto collection loop here to bypass MvList vs MoveList version issues entirely
-       vector<Move> moves;
-       movegen::legalmoves<vector<Move>>(moves, board);
+        // EXACT MATCH FOR YOUR COMPILER SIGNATURE: Movelist + 3 arguments
+        Movelist moves;
+        movegen::legalmoves(moves, board, 0);
 
         if (board.sideToMove() == Color::WHITE) {
             int max_value = -infinity;
