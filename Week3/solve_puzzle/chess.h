@@ -16,11 +16,11 @@ class ChessEngine {
 private:
     // Scoring system for final game states (Checkmate/Draws)
     int get_utility_given_terminal_state(int depth) {
-        auto game_over_info = board.is_game_over();
+        auto game_over_info = board.isGameOver();
         
         if (game_over_info.first == GameResultReason::CHECKMATE) {
             // The side whose turn it currently is has lost
-            if (board.side_to_move() == Color::WHITE) {
+            if (board.sideToMove() == Color::WHITE) {
                 return -100000 + depth; // White is checkmated (Excellent for Black)
             } else {
                 return 100000 - depth;  // Black is checkmated (Excellent for White)
@@ -37,12 +37,12 @@ public:
     Board board;
 
     void loadFen(const string& fen) {
-        board = Board::from_fen(fen); 
+        board = Board(fen); // Correct alternative constructor pattern for FEN
     }
 
     // Traditional Minimax Tree Search with Alpha-Beta Pruning
     int minimax_alpha_beta(int depth, int alpha, int beta, vector<Move> &best_moves_vec) {
-        auto game_over_info = board.is_game_over();
+        auto game_over_info = board.isGameOver();
         
         // Base Case Checkpoints
         if (game_over_info.second != GameResult::NONE) {
@@ -52,19 +52,19 @@ public:
             return eval();
         }
 
-        MvList moves; 
+        MoveList moves; 
         movegen::legalmoves(moves, board);
 
         // Maximizing Player Branch (White)
-        if (board.side_to_move() == Color::WHITE) {
+        if (board.sideToMove() == Color::WHITE) {
             int max_value = -infinity;
             
             for (const Move& move : moves) {
                 vector<Move> child_moves;
                 
-                board.make_move(move);
+                board.makeMove(move);
                 int evaluation = minimax_alpha_beta(depth - 1, alpha, beta, child_moves);
-                board.unmake_move(move);
+                board.unmakeMove(move);
 
                 if (evaluation > max_value) {
                     max_value = evaluation;
@@ -75,7 +75,7 @@ public:
                 
                 alpha = max(alpha, evaluation);
                 if (alpha >= beta) {
-                    break; // Beta Cutoff (Prune remaining branches)
+                    break; // Beta Cutoff
                 }
             }
             return max_value;
@@ -87,9 +87,9 @@ public:
             for (const Move& move : moves) {
                 vector<Move> child_moves;
                 
-                board.make_move(move);
+                board.makeMove(move);
                 int evaluation = minimax_alpha_beta(depth - 1, alpha, beta, child_moves);
-                board.unmake_move(move);
+                board.unmakeMove(move);
 
                 if (evaluation < min_value) {
                     min_value = evaluation;
@@ -100,7 +100,7 @@ public:
                 
                 beta = min(beta, evaluation);
                 if (alpha >= beta) {
-                    break; // Alpha Cutoff (Prune remaining branches)
+                    break; // Alpha Cutoff
                 }
             }
             return min_value;
@@ -108,4 +108,5 @@ public:
     }
 };
 
+#endif // CHESS_H
 #endif // CHESS_H
