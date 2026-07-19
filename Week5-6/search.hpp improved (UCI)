@@ -1,0 +1,118 @@
+#pragma once
+#include "chess.hpp"
+#include <algorithm>
+#include <iostream>
+#include <chrono>
+
+using namespace chess;
+
+// Time control stuff
+inline int max_time = 1000; 
+inline auto start_time = std::chrono::high_resolution_clock::now();
+inline bool stop_search = false;
+
+// simple evaluation function based on material values
+inline int evaluate(const Board& board) {
+    int score = 0;
+    for (int sq = 0; sq < 64; sq++) {
+        Piece p = board.at(Square(sq));
+        if (p != Piece::NONE) {
+            int val = 0;
+            if (p.type() == PieceType::PAWN) val = 100;
+            else if (p.type() == PieceType::KNIGHT) val = 300;
+            else if (p.type() == PieceType::BISHOP) val = 300;
+            else if (p.type() == PieceType::ROOK) val = 500;
+            else if (p.type() == PieceType::QUEEN) val = 900;
+            
+            if (p.color() == Color::WHITE) score += val;
+            else score -= val;
+        }
+    }
+    // return score based on side to move
+    return (board.sideToMove() == Color::WHITE) ? score : -score;
+}
+
+inline int negamax(Board& board, int depth, int alpha, int beta, Move& best_move) {
+    if (stop_search) return 0;
+    
+    // check time every 1024 nodes so it doesnt slow down too much
+    static int nodes = 0;
+    nodes++;
+    if (nodes % 1024 == 0) {
+        auto current_time = std::chrono::high_resolution_clock::now();
+        int time_passed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+        if (time_passed >= max_time) {
+            stop_search = true;
+            return 0;
+        }
+    }
+
+    if (depth == 0) {
+        return evaluate(board);
+    }
+    
+    Movelist moves;
+    movegen::legalmoves(moves, board);
+    
+    // checkmate or stalemate check
+    if (moves.size() == 0) {
+        if (board.inCheck()) return -100000; 
+        return 0; 
+    }
+    
+    // sort moves to check captures first (basic ordering)
+    std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
+        return board.isCapture(a) > board.isCapture(b);
+    });
+    
+    int best_score = -1000000;
+    Move local_best = moves[0];
+    
+    for (int i = 0; i < moves.size(); i++) {
+        board.makeMove(moves[i]);
+        Move dummy;
+        int score = -negamax(board, depth - 1, -beta, -alpha, dummy);
+        board.unmakeMove(moves[i]);
+        
+        // if time ran out during recursion, discard this move
+        if (stop_search) return 0; 
+        
+        if (score > best_score) {
+            best_score = score;
+            local_best = moves[i];
+        }
+        
+        alpha = std::max(alpha, score);
+        if (alpha >= beta) {
+            break; // beta cutoff
+        }
+    }
+    
+    best_move = local_best;
+    return best_score;
+}
+
+// Loop through depths 1, 2, 3... until time runs out
+inline Move iterative_deepening(Board& board) {
+    start_time = std::chrono::high_resolution_clock::now();
+    stop_search = false;
+    
+    Move absolute_best;
+    Movelist moves;
+    movegen::legalmoves(moves, board);
+    if (moves.size() > 0) absolute_best = moves[0]; // fallback safety move
+
+    for (int depth = 1; depth <= 20; depth++) {
+        Move current_best;
+        negamax(board, depth, -1000000, 1000000, current_best);
+        
+        // only update if we finished the whole depth without timing out
+        if (!stop_search) {
+            absolute_best = current_best;
+        } else {
+            break; 
+        }
+    }
+    
+    return absolute_best;
+}
